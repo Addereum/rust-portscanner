@@ -1,0 +1,26 @@
+# Rust Build
+/target/
+**/*.rs.bk
+
+# IDE/Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS Dateien
+.DS_Store
+Thumbs.db
+
+# AppImage Builder & Tool
+/appimage-builder*
+/appimagetool-*
+/AppImageBuilder.yml
+
+# AppImage Output Verzeichnisse
+/AppDir/
+/squashfs-root/
+
+# Sonstiges
+*.log
+*.tmp
