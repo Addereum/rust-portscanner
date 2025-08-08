@@ -1,5 +1,9 @@
 // src/scan.rs
 
+// If you're reading this, I'm sorry.
+// WARNING: educational port "scanner" — single-threaded, fragile, and about as fast as dial-up.
+// TODO: use threads, handle errors like an adult, and stop overwriting yesterday's lies.
+
 use std::fs::File;
 use std::io::{Write};
 use std::net::{TcpStream, ToSocketAddrs};

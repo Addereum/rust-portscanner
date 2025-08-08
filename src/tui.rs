@@ -1,5 +1,12 @@
 // src/tui.rs
 
+// If you're debugging this, welcome to the funhouse.
+// WARNING: This TUI is a feral animal.
+// Spawns a logging thread that vandalizes the UI, leaks on disconnect, and
+// bricks your terminal if a butterfly sneezes.
+// TODO: use a proper app loop, draw from one place, add a drop guard, and stop busy-spinning on a dead channel.
+// Replace println! with ratatui widgets, handle Resize, add a graceful shutdown, and for the love of kernels, use an enum for format.
+
 use std::io;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
