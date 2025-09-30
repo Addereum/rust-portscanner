@@ -14,12 +14,12 @@ use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
-    text::{Text},
+    text::Text,
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Terminal,
 };
 use crossterm::{
-    event::{self, Event, KeyCode},
+    event::{self, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -34,16 +34,15 @@ pub fn start_tui() -> io::Result<(String, String, &'static str, Sender<String>)>
     let mut target = String::from("google.com");
     let mut ports = String::from("80,443");
     let export_formats = ["txt", "html", "zip"];
-    let mut selected_format = 0;
-    let mut input_mode = 0;
+    let mut selected_format = 0usize;
+    let mut input_mode = 0usize;
 
     let (tx, rx): (Sender<String>, Receiver<String>) = mpsc::channel();
 
+    // logging thread prints messages that come from scan thread
     thread::spawn(move || {
-        loop {
-            if let Ok(line) = rx.recv() {
-                println!("{}", line);
-            }
+        while let Ok(line) = rx.recv() {
+            println!("{}", line);
         }
     });
 
@@ -100,33 +99,59 @@ pub fn start_tui() -> io::Result<(String, String, &'static str, Sender<String>)>
         })?;
 
         if event::poll(std::time::Duration::from_millis(200))? {
-            if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Esc => {
-                        disable_raw_mode()?;
-                        execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-                        return Err(io::Error::new(io::ErrorKind::Other, "Abgebrochen"));
-                    }
-                    KeyCode::Tab => input_mode = (input_mode + 1) % 2,
-                    KeyCode::Up => if selected_format > 0 { selected_format -= 1; },
-                    KeyCode::Down => if selected_format < export_formats.len() - 1 { selected_format += 1; },
-                    KeyCode::Enter => {
-                        disable_raw_mode()?;
-                        execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-                        return Ok((target.clone(), ports.clone(), export_formats[selected_format], tx));
-                    }
-                    KeyCode::Char(c) => match input_mode {
-                        0 => target.push(c),
-                        1 => ports.push(c),
+            match event::read()? {
+                Event::Key(key) => {
+                    // Only react on Press (and optionally Repeat).
+                    // Keeps short key presses from firing twice on Windows.
+                    match key.kind {
+                        KeyEventKind::Press | KeyEventKind::Repeat => {
+                            match key.code {
+                                KeyCode::Esc => {
+                                    disable_raw_mode()?;
+                                    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+                                    return Err(io::Error::new(io::ErrorKind::Other, "Abgebrochen"));
+                                }
+                                KeyCode::Tab => {
+                                    input_mode = (input_mode + 1) % 2;
+                                }
+                                KeyCode::Up => {
+                                    if selected_format > 0 {
+                                        selected_format -= 1;
+                                    }
+                                }
+                                KeyCode::Down => {
+                                    if selected_format < export_formats.len() - 1 {
+                                        selected_format += 1;
+                                    }
+                                }
+                                KeyCode::Enter => {
+                                    disable_raw_mode()?;
+                                    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+                                    return Ok((target.clone(), ports.clone(), export_formats[selected_format], tx));
+                                }
+                                KeyCode::Char(c) => match input_mode {
+                                    0 => target.push(c),
+                                    1 => ports.push(c),
+                                    _ => {}
+                                },
+                                KeyCode::Backspace => match input_mode {
+                                    0 => {
+                                        target.pop();
+                                    }
+                                    1 => {
+                                        ports.pop();
+                                    }
+                                    _ => {}
+                                },
+                                _ => {}
+                            }
+                        }
+                        // ignore Release and other kinds
                         _ => {}
-                    },
-                    KeyCode::Backspace => match input_mode {
-                        0 => { target.pop(); },
-                        1 => { ports.pop(); },
-                        _ => {}
-                    },
-                    _ => {}
+                    }
                 }
+                // ignore other events (Mouse, Resize etc.)
+                _ => {}
             }
         }
     }
