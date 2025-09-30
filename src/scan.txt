@@ -1,0 +1,4 @@
+Scan für: google.com
+
+Port 80: offen
+Port 443: offen
