@@ -45,5 +45,5 @@ echo "🚀 Creating AppImage..."
 ./appimagetool-$ARCH.AppImage AppDir
 
 # Rename output
-mv *.AppImage ${APP}-${ARCH}.AppImage
+# mv *.AppImage ${APP}-${ARCH}.AppImage
 echo "✅ Done: ${APP}-${ARCH}.AppImage"
