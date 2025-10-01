@@ -25,7 +25,6 @@ cat > AppDir/${APP}.desktop <<EOF
 [Desktop Entry]
 Name=Portscanner
 Exec=portscanner
-Icon=utilities-terminal
 Type=Application
 Categories=Utility;
 Terminal=true
