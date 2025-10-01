@@ -15,6 +15,7 @@ fi
 # Prepare AppDir
 rm -rf AppDir
 mkdir -p AppDir/usr/bin
+cp iconps.png AppDir/
 
 # Copy binary (make sure it's built for correct architecture)
 BINARY_PATH="${1:-target/${ARCH}-unknown-linux-gnu/release/portscanner}"
@@ -25,6 +26,7 @@ cat > AppDir/${APP}.desktop <<EOF
 [Desktop Entry]
 Name=Portscanner
 Exec=portscanner
+Icon=iconps
 Type=Application
 Categories=Utility;
 Terminal=true
