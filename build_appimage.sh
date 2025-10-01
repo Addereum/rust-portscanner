@@ -4,20 +4,22 @@ set -e
 APP=Portscanner
 ARCH=$(uname -m)
 
-# Ensure appimagetool exists
-if [ ! -f appimagetool.AppImage ]; then
-  wget -O appimagetool.AppImage https://github.com/AppImage/AppImageKit/releases/latest/download/appimagetool-x86_64.AppImage
-  chmod +x appimagetool.AppImage
+# Ensure appimagetool exists (download from correct repo)
+if [ ! -f appimagetool-$ARCH.AppImage ]; then
+  # New repo: AppImage/appimagetool
+  wget -O appimagetool-$ARCH.AppImage \
+    https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-$ARCH.AppImage
+  chmod +x appimagetool-$ARCH.AppImage
 fi
 
 # Prepare AppDir
 rm -rf AppDir
 mkdir -p AppDir/usr/bin
 
-# Copy binary
-cp target/x86_64-unknown-linux-gnu/release/portscanner AppDir/usr/bin/
+# Copy binary (make sure it's built for correct architecture)
+cp target/${ARCH}-unknown-linux-gnu/release/portscanner AppDir/usr/bin/
 
-# .desktop file
+# Create .desktop
 cat > AppDir/${APP}.desktop <<EOF
 [Desktop Entry]
 Name=Portscanner
@@ -28,7 +30,7 @@ Categories=Utility;
 Terminal=true
 EOF
 
-# AppRun file
+# Create AppRun launcher
 cat > AppDir/AppRun <<'EOF'
 #!/bin/bash
 HERE="$(dirname "$(readlink -f "$0")")"
@@ -38,8 +40,8 @@ chmod +x AppDir/AppRun
 
 # Build AppImage
 echo "🚀 Creating AppImage..."
-./appimagetool.AppImage AppDir
+./appimagetool-$ARCH.AppImage AppDir
 
-# Rename
+# Rename output
 mv *.AppImage ${APP}-${ARCH}.AppImage
 echo "✅ Done: ${APP}-${ARCH}.AppImage"
