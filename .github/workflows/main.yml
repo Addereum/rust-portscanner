@@ -70,6 +70,12 @@ jobs:
           source $HOME/.cargo/env
           cargo install cargo-deb
           cargo deb --target=x86_64-unknown-linux-gnu
+      - name: Build AppImage
+        run: bash ./build_appimage.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portscanner-x86_64-appimage
+          path: Portscanner-*.AppImage
       - name: Copy binaries
         run: |
           mv target/x86_64-unknown-linux-gnu/release/portscanner ./portscanner
@@ -84,12 +90,6 @@ jobs:
             portscanner
             portscanner-debug
             *.deb
-      - name: Build AppImage
-        run: bash ./build_appimage.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: portscanner-x86_64-appimage
-          path: Portscanner-*.AppImage
 
   build_windows_x86:
     name: Windows

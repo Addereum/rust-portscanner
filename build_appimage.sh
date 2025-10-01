@@ -17,7 +17,8 @@ rm -rf AppDir
 mkdir -p AppDir/usr/bin
 
 # Copy binary (make sure it's built for correct architecture)
-cp target/${ARCH}-unknown-linux-gnu/release/portscanner AppDir/usr/bin/
+BINARY_PATH="${1:-target/${ARCH}-unknown-linux-gnu/release/portscanner}"
+cp "$BINARY_PATH" AppDir/usr/bin/
 
 # Create .desktop
 cat > AppDir/${APP}.desktop <<EOF
