@@ -34,6 +34,8 @@ jobs:
         run: |
           mv target/armv7-unknown-linux-gnueabihf/release/portscanner ./portscanner
           mv target/armv7-unknown-linux-gnueabihf/debug/portscanner ./portscanner-debug
+          chmod +x portscanner
+          chmod +x portscanner-debug
       - uses: actions/upload-artifact@v4
         with:
           name: portscanner-armv7-unknown-linux-gnueabihf
@@ -68,11 +70,21 @@ jobs:
           source $HOME/.cargo/env
           cargo install cargo-deb
           cargo deb --target=x86_64-unknown-linux-gnu
+
+      - name: Install libfuse2 (for AppImage)
+        run: sudo apt-get update && sudo apt-get install -y libfuse2
+
+      - name: Build AppImage
+        run: bash ./build_appimage.sh
+
       - name: Copy binaries
         run: |
           mv target/x86_64-unknown-linux-gnu/release/portscanner ./portscanner
           mv target/x86_64-unknown-linux-gnu/debug/portscanner ./portscanner-debug
           mv target/debian/*.deb ./
+          chmod +x portscanner
+          chmod +x portscanner-debug
+
       - uses: actions/upload-artifact@v4
         with:
           name: portscanner-x86_64-unknown-linux-gnu
@@ -80,6 +92,7 @@ jobs:
             portscanner
             portscanner-debug
             *.deb
+
   build_windows_x86:
     name: Windows
     runs-on: ubuntu-latest
