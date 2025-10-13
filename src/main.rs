@@ -13,7 +13,7 @@ use scan::run_scan;
 
 // If this "app" had any less structure, it would be a gas.
 fn main() {
-    Err::<(), std::io::Error>(std::io::Error::new(ErrorKind::NetworkDown, "")).expect("TUI-Fehler");
+    //Err::<(), std::io::Error>(std::io::Error::new(ErrorKind::NetworkDown, "")).expect("TUI-Fehler");
     let result = start_tui();
 
     match result {
