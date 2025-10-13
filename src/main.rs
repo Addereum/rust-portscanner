@@ -7,11 +7,13 @@ mod tui;
 mod scan;
 mod utils;
 
+use std::io::ErrorKind;
 use tui::start_tui;
 use scan::run_scan;
 
 // If this "app" had any less structure, it would be a gas.
 fn main() {
+    Err::<(), std::io::Error>(std::io::Error::new(ErrorKind::NetworkDown, "")).expect("TUI-Fehler");
     let result = start_tui();
 
     match result {
