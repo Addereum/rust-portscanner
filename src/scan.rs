@@ -1,16 +1,19 @@
 // src/scan.rs
-
-// If you're reading this, I'm sorry.
-// WARNING: educational port "scanner" — single-threaded, fragile, and about as fast as dial-up.
-// TODO: use threads, handle errors like an adult, and stop overwriting yesterday's lies.
-
 use std::fs::File;
-use std::io::{Write};
+use std::io::Write;
 use std::net::{TcpStream, ToSocketAddrs};
 use std::sync::mpsc::Sender;
 use std::time::{Duration, Instant};
 use zip::write::FileOptions;
 use zip::ZipWriter;
+use num_cpus;
+
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
+
+/// Max parallel worker threads. Tune this for your machine/network.
+/// Consider making this configurable (CLI or config file).
+const CONCURRENCY: usize = 64;
 
 pub fn run_scan(target: &str, ports_str: &str, format: &str, tx: Sender<String>) -> std::io::Result<()> {
     let ports = match crate::utils::parse_ports(ports_str) {
@@ -25,31 +28,42 @@ pub fn run_scan(target: &str, ports_str: &str, format: &str, tx: Sender<String>)
 }
 
 fn run_scan_from_vec(target: &str, ports: &[u16], format: &str, tx: Sender<String>) -> std::io::Result<()> {
-    let mut results = vec![];
     let start = Instant::now();
+    let total = ports.len();
 
-    if let Err(err) = tx.send(format!("🔍 Scanne {} Ports auf {}", ports.len(), target)) {
-        eprintln!("Fehler beim Senden von Nachrichten: {err}");
-    }
+    tx.send(format!("🔍 Scanne {} Ports auf {}", total, target)).ok();
 
-    for (i, port) in ports.iter().enumerate() {
-        let addr = format!("{}:{}", target, port);
-        if let Ok(mut addrs) = addr.to_socket_addrs() &&
-            let Some(sock) = addrs.next() {
-            match TcpStream::connect_timeout(&sock, Duration::from_millis(300)) {
-                Ok(_) => {
-                    tx.send(format!("[{}/{}] Port {} offen", i+1, ports.len(), port)).ok();
-                    results.push((*port, true));
+    // Build a local Rayon pool with a concurrency cap so we don't saturate the system.
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(CONCURRENCY.min(num_cpus::get().max(1)))
+        .build()
+        .expect("failed to build rayon thread pool");
 
+    // Run the parallel scan inside the pool.
+    let results: Vec<(u16, bool)> = pool.install(|| {
+        ports
+            .par_iter()
+            .map(|port| {
+                let addr = format!("{}:{}", target, port);
+                let mut open = false;
+
+                if let Ok(mut addrs) = addr.to_socket_addrs() {
+                    if let Some(sock) = addrs.next() {
+                        if TcpStream::connect_timeout(&sock, Duration::from_millis(300)).is_ok() {
+                            open = true;
+                        }
+                    }
                 }
-                Err(_) => {
-                    tx.send(format!("[{}/{}] Port {} geschlossen", i+1, ports.len(), port)).ok();
-                    results.push((*port, false));
 
-                }
-            }
-        }
-    }
+                // Best-effort send progress message as soon as this port is done.
+                // We don't include a strict index because tasks finish out-of-order.
+                tx.send(format!("Port {} {}", port, if open { "offen" } else { "geschlossen" }))
+                    .ok();
+
+                (*port, open)
+            })
+            .collect()
+    });
 
     tx.send(format!("⏱️  Scan abgeschlossen in {:.2?}", start.elapsed())).ok();
 
