@@ -13,7 +13,14 @@ use zip::write::FileOptions;
 use zip::ZipWriter;
 
 pub fn run_scan(target: &str, ports_str: &str, format: &str, tx: Sender<String>) -> std::io::Result<()> {
-    let ports = crate::utils::parse_ports(ports_str);
+    let ports = match crate::utils::parse_ports(ports_str) {
+        Ok(p) => p,
+        Err(e) => {
+            tx.send(format!("❌ Port-Eingabe ungültig: {e}")).ok();
+            return Ok(());
+        }
+    };
+
     run_scan_from_vec(target, &ports, format, tx)
 }
 
@@ -21,18 +28,24 @@ fn run_scan_from_vec(target: &str, ports: &[u16], format: &str, tx: Sender<Strin
     let mut results = vec![];
     let start = Instant::now();
 
-    tx.send(format!("🔍 Scanne {} Ports auf {}", ports.len(), target)).ok();
+    if let Err(err) = tx.send(format!("🔍 Scanne {} Ports auf {}", ports.len(), target)) {
+        eprintln!("Fehler beim Senden von Nachrichten: {err}");
+    }
 
-    for (i, &port) in ports.iter().enumerate() {
+    for (i, port) in ports.iter().enumerate() {
         let addr = format!("{}:{}", target, port);
-        if let Ok(mut addrs) = addr.to_socket_addrs() {
-            if let Some(sock) = addrs.next() {
-                if TcpStream::connect_timeout(&sock, Duration::from_millis(300)).is_ok() {
+        if let Ok(mut addrs) = addr.to_socket_addrs() &&
+            let Some(sock) = addrs.next() {
+            match TcpStream::connect_timeout(&sock, Duration::from_millis(300)) {
+                Ok(_) => {
                     tx.send(format!("[{}/{}] Port {} offen", i+1, ports.len(), port)).ok();
-                    results.push((port, true));
-                } else {
+                    results.push((*port, true));
+
+                }
+                Err(_) => {
                     tx.send(format!("[{}/{}] Port {} geschlossen", i+1, ports.len(), port)).ok();
-                    results.push((port, false));
+                    results.push((*port, false));
+
                 }
             }
         }
@@ -44,9 +57,9 @@ fn run_scan_from_vec(target: &str, ports: &[u16], format: &str, tx: Sender<Strin
         "txt" => export_txt(target, &results)?,
         "html" => export_html(target, &results)?,
         "zip" => export_zip(target, &results)?,
-	_ => {
-    	let _ = tx.send(format!("Unbekanntes Format: {}", format));
-	}
+        _ => {
+            let _ = tx.send(format!("Unbekanntes Format: {}", format));
+        }
     }
 
     tx.send(format!("✅ Ergebnisse exportiert als {}", format)).ok();
