@@ -10,6 +10,7 @@ colored = "2"
 ratatui = "0.26"
 crossterm = "0.27"
 zip = "0.6"
+num_cpus = "1.16"
 
 [package.metadata.deb]
 name = "rust-portscanner"
