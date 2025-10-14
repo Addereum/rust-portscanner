@@ -125,3 +125,44 @@ jobs:
           path: |
             portscanner.exe
             debug-portscanner.exe
+
+  release:
+    name: Create GitHub Release
+    needs: [ build_linux_arm7, build_linux_x86, build_windows_x86 ]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Delete previous "latest" release (if exists)
+        uses: dev-drprasad/delete-tag-and-release@v1.0
+        with:
+          tag_name: latest
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List downloaded artifacts
+        run: ls -R artifacts
+
+      - name: Create/Update "latest" Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Portscanner (latest)"
+          make_latest: true
+          body: |
+            🚀 Automated release from commit ${{ github.sha }} on branch main.
+
+            Includes:
+            - Linux x86_64 (.deb + AppImage)
+            - Linux ARMv7
+            - Windows x86_64
+          files: |
+            artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
