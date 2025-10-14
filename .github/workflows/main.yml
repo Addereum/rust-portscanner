@@ -13,58 +13,66 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: armv7-unknown-linux-gnueabihf
           override: true
+
       - uses: actions-rs/cargo@v1
         name: Build Release
         with:
           use-cross: true
           command: build
           args: --target armv7-unknown-linux-gnueabihf --release --all-features
+
       - uses: actions-rs/cargo@v1
         name: Build Debug
         with:
           use-cross: true
           command: build
           args: --target armv7-unknown-linux-gnueabihf --all-features
-      - name: Copy binaries
+
+      - name: Collect ARMv7 binaries
         run: |
-          mv target/armv7-unknown-linux-gnueabihf/release/portscanner ./portscanner
-          mv target/armv7-unknown-linux-gnueabihf/debug/portscanner ./portscanner-debug
-          chmod +x portscanner
-          chmod +x portscanner-debug
+          mkdir out
+          cp target/armv7-unknown-linux-gnueabihf/release/portscanner out/portscanner-armv7
+          cp target/armv7-unknown-linux-gnueabihf/debug/portscanner out/portscanner-armv7-debug
+          chmod +x out/*
+
       - uses: actions/upload-artifact@v4
         with:
           name: portscanner-armv7-unknown-linux-gnueabihf
-          path: |
-            portscanner
-            portscanner-debug
+          path: out/
+
   build_linux_x86:
     name: Linux x86_64
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: x86_64-unknown-linux-gnu
           override: true
+
       - uses: actions-rs/cargo@v1
         name: Build Release
         with:
           use-cross: true
           command: build
           args: --target x86_64-unknown-linux-gnu --release --all-features
+
       - uses: actions-rs/cargo@v1
         name: Build Debug
         with:
           use-cross: true
           command: build
           args: --target x86_64-unknown-linux-gnu --all-features
-      - name: Rust Cargo Deb Package Build (amd64, Debian)
+
+      - name: Build .deb Package (amd64)
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           source $HOME/.cargo/env
@@ -77,58 +85,60 @@ jobs:
       - name: Build AppImage
         run: bash ./build_appimage.sh
 
-      - name: Copy binaries
+      - name: Collect Linux x86_64 binaries
         run: |
-          mv target/x86_64-unknown-linux-gnu/release/portscanner ./portscanner
-          mv target/x86_64-unknown-linux-gnu/debug/portscanner ./portscanner-debug
-          mv target/debian/*.deb ./
-          chmod +x portscanner
-          chmod +x portscanner-debug
+          mkdir out
+          cp target/x86_64-unknown-linux-gnu/release/portscanner out/portscanner-x86_64
+          cp target/x86_64-unknown-linux-gnu/debug/portscanner out/portscanner-x86_64-debug
+          cp target/debian/*.deb out/
+          if [ -f Portscanner-x86_64.AppImage ]; then cp Portscanner-x86_64.AppImage out/; fi
+          chmod +x out/* || true
 
       - uses: actions/upload-artifact@v4
         with:
           name: portscanner-x86_64-unknown-linux-gnu
-          path: |
-            portscanner
-            portscanner-debug
-            *.deb
+          path: out/
 
   build_windows_x86:
-    name: Windows
+    name: Windows x86_64
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: x86_64-pc-windows-gnu
           override: true
+
       - uses: actions-rs/cargo@v1
         name: Build Release
         with:
           use-cross: true
           command: build
           args: --target x86_64-pc-windows-gnu --release --all-features
+
       - uses: actions-rs/cargo@v1
         name: Build Debug
         with:
           use-cross: true
           command: build
           args: --target x86_64-pc-windows-gnu --all-features
-      - name: Copy binaries
+
+      - name: Collect Windows binaries
         run: |
-          mv target/x86_64-pc-windows-gnu/release/portscanner.exe ./portscanner.exe
-          mv target/x86_64-pc-windows-gnu/debug/portscanner.exe ./debug-portscanner.exe
+          mkdir out
+          cp target/x86_64-pc-windows-gnu/release/portscanner.exe out/portscanner-x86_64.exe
+          cp target/x86_64-pc-windows-gnu/debug/portscanner.exe out/portscanner-x86_64-debug.exe
+
       - uses: actions/upload-artifact@v4
         with:
           name: portscanner-x86_64-pc-windows-gnu
-          path: |
-            portscanner.exe
-            debug-portscanner.exe
+          path: out/
 
   release:
     name: Create GitHub Release
-    needs: [ build_linux_arm7, build_linux_x86, build_windows_x86 ]
+    needs: [build_linux_arm7, build_linux_x86, build_windows_x86]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
@@ -141,30 +151,32 @@ jobs:
           tag_name: latest
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Wait for GitHub to propagate deletion
-        run: sleep 15
+      - name: Wait for GitHub propagation
+        run: sleep 10
 
-      - name: Download all artifacts
+      - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: List downloaded artifacts
+      - name: List artifacts
         run: ls -R artifacts
 
-      - name: Create/Update "latest" Release
+      - name: Create new "latest" release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: "Portscanner (latest)"
           make_latest: true
           body: |
-            🚀 Automated release from commit ${{ github.sha }} on branch main.
+            🚀 **Automated Release**
+            Commit: `${{ github.sha }}`
+            Branch: `${{ github.ref_name }}`
 
-            Includes:
-            - Linux x86_64 (.deb + AppImage)
-            - Linux ARMv7
-            - Windows x86_64
+            **Included builds:**
+            - 🐧 Linux x86_64 (`.deb` + `.AppImage`)
+            - 🧱 Linux ARMv7
+            - 🪟 Windows x86_64
           files: |
             artifacts/**/*
         env:
