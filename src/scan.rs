@@ -6,7 +6,6 @@ use std::sync::mpsc::Sender;
 use std::time::{Duration, Instant};
 use zip::write::FileOptions;
 use zip::ZipWriter;
-use num_cpus;
 
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
@@ -47,13 +46,13 @@ fn run_scan_from_vec(target: &str, ports: &[u16], format: &str, tx: Sender<Strin
                 let addr = format!("{}:{}", target, port);
                 let mut open = false;
 
-                if let Ok(mut addrs) = addr.to_socket_addrs() {
-                    if let Some(sock) = addrs.next() {
-                        if TcpStream::connect_timeout(&sock, Duration::from_millis(300)).is_ok() {
-                            open = true;
-                        }
-                    }
+                if let Ok(mut addrs) = addr.to_socket_addrs()
+                    && let Some(sock) = addrs.next()
+                    && TcpStream::connect_timeout(&sock, Duration::from_millis(300)).is_ok()
+                {
+                    open = true;
                 }
+
 
                 // Best-effort send progress message as soon as this port is done.
                 // We don't include a strict index because tasks finish out-of-order.

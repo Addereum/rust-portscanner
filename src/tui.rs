@@ -98,60 +98,47 @@ pub fn start_tui() -> io::Result<(String, String, &'static str, Sender<String>)>
             f.render_widget(button, chunks[3]);
         })?;
 
-        if event::poll(std::time::Duration::from_millis(200))? {
-            match event::read()? {
-                Event::Key(key) => {
-                    // Only react on Press (and optionally Repeat).
-                    // Keeps short key presses from firing twice on Windows.
-                    match key.kind {
-                        KeyEventKind::Press | KeyEventKind::Repeat => {
-                            match key.code {
-                                KeyCode::Esc => {
-                                    disable_raw_mode()?;
-                                    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-                                    return Err(io::Error::new(io::ErrorKind::Other, "Abgebrochen"));
-                                }
-                                KeyCode::Tab => {
-                                    input_mode = (input_mode + 1) % 2;
-                                }
-                                KeyCode::Up => {
-                                    if selected_format > 0 {
-                                        selected_format -= 1;
-                                    }
-                                }
-                                KeyCode::Down => {
-                                    if selected_format < export_formats.len() - 1 {
-                                        selected_format += 1;
-                                    }
-                                }
-                                KeyCode::Enter => {
-                                    disable_raw_mode()?;
-                                    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-                                    return Ok((target.clone(), ports.clone(), export_formats[selected_format], tx));
-                                }
-                                KeyCode::Char(c) => match input_mode {
-                                    0 => target.push(c),
-                                    1 => ports.push(c),
-                                    _ => {}
-                                },
-                                KeyCode::Backspace => match input_mode {
-                                    0 => {
-                                        target.pop();
-                                    }
-                                    1 => {
-                                        ports.pop();
-                                    }
-                                    _ => {}
-                                },
-                                _ => {}
+        if event::poll(std::time::Duration::from_millis(200))?
+            && let Event::Key(key) = event::read()? {
+            // Only react on Press (and optionally Repeat).
+            match key.kind {
+                KeyEventKind::Press | KeyEventKind::Repeat => {
+                    match key.code {
+                        KeyCode::Esc => {
+                            disable_raw_mode()?;
+                            execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+                            return Err(io::Error::other("Abgebrochen"));
+                        }
+                        KeyCode::Tab => {
+                            input_mode = (input_mode + 1) % 2;
+                        }
+                        KeyCode::Up => {
+                            selected_format = selected_format.saturating_sub(1);
+                        }
+                        KeyCode::Down => {
+                            if selected_format < export_formats.len() - 1 {
+                                selected_format += 1;
                             }
                         }
-                        // ignore Release and other kinds
+                        KeyCode::Enter => {
+                            disable_raw_mode()?;
+                            execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+                            return Ok((target.clone(), ports.clone(), export_formats[selected_format], tx));
+                        }
+                        KeyCode::Char(c) => match input_mode {
+                            0 => target.push(c),
+                            1 => ports.push(c),
+                            _ => {}
+                        },
+                        KeyCode::Backspace => match input_mode {
+                            0 => { target.pop(); }
+                            1 => { ports.pop(); }
+                            _ => {}
+                        },
                         _ => {}
                     }
                 }
-                // ignore other events (Mouse, Resize etc.)
-                _ => {}
+                _ => {} // ignore Release and other kinds
             }
         }
     }
