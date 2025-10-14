@@ -141,6 +141,9 @@ jobs:
           tag_name: latest
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Wait for GitHub to propagate deletion
+        run: sleep 15
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
