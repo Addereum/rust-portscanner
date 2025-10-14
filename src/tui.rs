@@ -7,22 +7,22 @@
 // TODO: use a proper app loop, draw from one place, add a drop guard, and stop busy-spinning on a dead channel.
 // Replace println! with ratatui widgets, handle Resize, add a graceful shutdown, and for the love of kernels, use an enum for format.
 
-use std::io;
-use std::sync::mpsc::{self, Receiver, Sender};
-use std::thread;
+use crossterm::{
+    event::{self, Event, KeyCode, KeyEventKind},
+    execute,
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+};
 use ratatui::{
+    Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
     text::Text,
     widgets::{Block, Borders, List, ListItem, Paragraph},
-    Terminal,
 };
-use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
+use std::io;
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::thread;
 
 pub fn start_tui() -> io::Result<(String, String, &'static str, Sender<String>)> {
     enable_raw_mode()?;
@@ -89,8 +89,10 @@ pub fn start_tui() -> io::Result<(String, String, &'static str, Sender<String>)>
             let export_list = List::new(export_items)
                 .block(Block::default().borders(Borders::ALL).title("Exportformat"));
 
-            let button = Paragraph::new(Text::from("Drücke ENTER zum Starten oder ESC zum Abbrechen"))
-                .style(Style::default().fg(Color::Blue));
+            let button = Paragraph::new(Text::from(
+                "Drücke ENTER zum Starten oder ESC zum Abbrechen",
+            ))
+            .style(Style::default().fg(Color::Blue));
 
             f.render_widget(target_input, chunks[0]);
             f.render_widget(ports_input, chunks[1]);
@@ -99,45 +101,53 @@ pub fn start_tui() -> io::Result<(String, String, &'static str, Sender<String>)>
         })?;
 
         if event::poll(std::time::Duration::from_millis(200))?
-            && let Event::Key(key) = event::read()? {
+            && let Event::Key(key) = event::read()?
+        {
             // Only react on Press (and optionally Repeat).
             match key.kind {
-                KeyEventKind::Press | KeyEventKind::Repeat => {
-                    match key.code {
-                        KeyCode::Esc => {
-                            disable_raw_mode()?;
-                            execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-                            return Err(io::Error::other("Abgebrochen"));
-                        }
-                        KeyCode::Tab => {
-                            input_mode = (input_mode + 1) % 2;
-                        }
-                        KeyCode::Up => {
-                            selected_format = selected_format.saturating_sub(1);
-                        }
-                        KeyCode::Down => {
-                            if selected_format < export_formats.len() - 1 {
-                                selected_format += 1;
-                            }
-                        }
-                        KeyCode::Enter => {
-                            disable_raw_mode()?;
-                            execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-                            return Ok((target.clone(), ports.clone(), export_formats[selected_format], tx));
-                        }
-                        KeyCode::Char(c) => match input_mode {
-                            0 => target.push(c),
-                            1 => ports.push(c),
-                            _ => {}
-                        },
-                        KeyCode::Backspace => match input_mode {
-                            0 => { target.pop(); }
-                            1 => { ports.pop(); }
-                            _ => {}
-                        },
-                        _ => {}
+                KeyEventKind::Press | KeyEventKind::Repeat => match key.code {
+                    KeyCode::Esc => {
+                        disable_raw_mode()?;
+                        execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+                        return Err(io::Error::other("Abgebrochen"));
                     }
-                }
+                    KeyCode::Tab => {
+                        input_mode = (input_mode + 1) % 2;
+                    }
+                    KeyCode::Up => {
+                        selected_format = selected_format.saturating_sub(1);
+                    }
+                    KeyCode::Down => {
+                        if selected_format < export_formats.len() - 1 {
+                            selected_format += 1;
+                        }
+                    }
+                    KeyCode::Enter => {
+                        disable_raw_mode()?;
+                        execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+                        return Ok((
+                            target.clone(),
+                            ports.clone(),
+                            export_formats[selected_format],
+                            tx,
+                        ));
+                    }
+                    KeyCode::Char(c) => match input_mode {
+                        0 => target.push(c),
+                        1 => ports.push(c),
+                        _ => {}
+                    },
+                    KeyCode::Backspace => match input_mode {
+                        0 => {
+                            target.pop();
+                        }
+                        1 => {
+                            ports.pop();
+                        }
+                        _ => {}
+                    },
+                    _ => {}
+                },
                 _ => {} // ignore Release and other kinds
             }
         }

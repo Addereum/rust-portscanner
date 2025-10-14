@@ -1,6 +1,6 @@
 // src/utils.rs
 
-use clap::{error::ErrorKind, Error};
+use clap::{Error, error::ErrorKind};
 
 /// Parses a comma-separated list of ports or ranges, e.g. "22,80-85,443".
 /// Returns an error for invalid input (non-numeric, negative, >65535).
@@ -12,7 +12,10 @@ pub fn parse_ports(input: &str) -> Result<Vec<u16>, Error> {
             let start = parse_port(start)?;
             let end = parse_port(end)?;
             if start > end {
-                return Err(Error::raw(ErrorKind::ValueValidation, format!("invalid range: {part}")));
+                return Err(Error::raw(
+                    ErrorKind::ValueValidation,
+                    format!("invalid range: {part}"),
+                ));
             }
             ports.extend(start..=end);
         } else {
@@ -21,7 +24,10 @@ pub fn parse_ports(input: &str) -> Result<Vec<u16>, Error> {
     }
 
     if ports.is_empty() {
-        return Err(Error::raw(ErrorKind::ValueValidation, "no valid ports found"));
+        return Err(Error::raw(
+            ErrorKind::ValueValidation,
+            "no valid ports found",
+        ));
     }
 
     Ok(ports)
@@ -29,13 +35,17 @@ pub fn parse_ports(input: &str) -> Result<Vec<u16>, Error> {
 
 fn parse_port(s: &str) -> Result<u16, Error> {
     let p: i64 = s.parse().map_err(|_| {
-        Error::raw(ErrorKind::ValueValidation, format!("invalid port value: {s}"))
+        Error::raw(
+            ErrorKind::ValueValidation,
+            format!("invalid port value: {s}"),
+        )
     })?;
 
     if !(0..=65535).contains(&p) {
-        return Err(Error::raw(ErrorKind::ValueValidation, format!(
-            "port out of range (0–65535): {s}"
-        )));
+        return Err(Error::raw(
+            ErrorKind::ValueValidation,
+            format!("port out of range (0–65535): {s}"),
+        ));
     }
 
     Ok(p as u16)
