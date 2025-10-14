@@ -90,16 +90,93 @@ fn export_txt(target: &str, results: &[(u16, bool)]) -> std::io::Result<()> {
 
 fn export_html(target: &str, results: &[(u16, bool)]) -> std::io::Result<()> {
     let mut file = File::create("scan.html")?;
-    writeln!(file, "<html><body><h1>Scan für {}</h1><ul>", target)?;
+    writeln!(
+        file,
+        r#"<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portscan – {target}</title>
+<style>
+    body {{
+        font-family: "Segoe UI", Arial, sans-serif;
+        background-color: #f7f9fb;
+        color: #333;
+        margin: 40px;
+        line-height: 1.5;
+    }}
+    h1 {{
+        font-size: 1.8rem;
+        border-bottom: 2px solid #0078d4;
+        padding-bottom: 6px;
+        margin-bottom: 20px;
+    }}
+    table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }}
+    th, td {{
+        padding: 10px 14px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+    }}
+    th {{
+        background-color: #0078d4;
+        color: #fff;
+        font-weight: 500;
+    }}
+    tr:hover {{
+        background-color: #f1f1f1;
+    }}
+    .open {{
+        color: #008000;
+        font-weight: bold;
+    }}
+    .closed {{
+        color: #c00;
+        font-weight: bold;
+    }}
+    footer {{
+        font-size: 0.85rem;
+        color: #666;
+        text-align: right;
+        margin-top: 40px;
+    }}
+</style>
+</head>
+<body>
+<h1>Portscan-Ergebnis für {target}</h1>
+<table>
+<thead>
+<tr><th>Port</th><th>Status</th></tr>
+</thead>
+<tbody>"#
+    )?;
+
     for (port, open) in results {
-        writeln!(
-            file,
-            "<li>Port {}: <strong>{}</strong></li>",
-            port,
-            if *open { "offen" } else { "geschlossen" }
-        )?;
+        let status = if *open {
+            "<span class=\"open\">Offen</span>"
+        } else {
+            "<span class=\"closed\">Geschlossen</span>"
+        };
+        writeln!(file, "<tr><td>{}</td><td>{}</td></tr>", port, status)?;
     }
-    writeln!(file, "</ul></body></html>")?;
+
+    writeln!(
+        file,
+        r#"</tbody>
+</table>
+<footer>
+Erstellt am {} &nbsp;–&nbsp; Portscanner Export
+</footer>
+</body>
+</html>"#,
+        chrono::Local::now().format("%d.%m.%Y %H:%M:%S")
+    )?;
+
     Ok(())
 }
 
