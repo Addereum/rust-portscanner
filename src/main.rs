@@ -7,7 +7,6 @@ mod tui;
 mod scan;
 mod utils;
 
-use std::io::ErrorKind;
 use tui::start_tui;
 use scan::run_scan;
 
