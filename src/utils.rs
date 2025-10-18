@@ -1,52 +1,42 @@
 // src/utils.rs
-
-use clap::{Error, error::ErrorKind};
+use anyhow::{Result, bail};
 
 /// Parses a comma-separated list of ports or ranges, e.g. "22,80-85,443".
-/// Returns an error for invalid input (non-numeric, negative, >65535).
-pub fn parse_ports(input: &str) -> Result<Vec<u16>, Error> {
+/// Returns sorted unique Vec<u16> or an error.
+pub fn parse_ports(input: &str) -> Result<Vec<u16>> {
     let mut ports = Vec::new();
 
     for part in input.split(',').map(str::trim).filter(|s| !s.is_empty()) {
-        if let Some((start, end)) = part.split_once('-') {
-            let start = parse_port(start)?;
-            let end = parse_port(end)?;
+        if let Some((start_s, end_s)) = part.split_once('-') {
+            let start = parse_port(start_s)?;
+            let end = parse_port(end_s)?;
             if start > end {
-                return Err(Error::raw(
-                    ErrorKind::ValueValidation,
-                    format!("invalid range: {part}"),
-                ));
+                bail!("invalid range: {}", part);
             }
-            ports.extend(start..=end);
+            for p in start..=end {
+                ports.push(p);
+            }
         } else {
-            ports.push(parse_port(part)?);
+            let p = parse_port(part)?;
+            ports.push(p);
         }
     }
 
     if ports.is_empty() {
-        return Err(Error::raw(
-            ErrorKind::ValueValidation,
-            "no valid ports found",
-        ));
+        bail!("no valid ports found");
     }
 
+    ports.sort_unstable();
+    ports.dedup();
     Ok(ports)
 }
 
-fn parse_port(s: &str) -> Result<u16, Error> {
-    let p: i64 = s.parse().map_err(|_| {
-        Error::raw(
-            ErrorKind::ValueValidation,
-            format!("invalid port value: {s}"),
-        )
-    })?;
-
+fn parse_port(s: &str) -> Result<u16> {
+    let p: i64 = s
+        .parse()
+        .map_err(|_| anyhow::anyhow!("invalid port value: {}", s))?;
     if !(0..=65535).contains(&p) {
-        return Err(Error::raw(
-            ErrorKind::ValueValidation,
-            format!("port out of range (0–65535): {s}"),
-        ));
+        bail!("port out of range (0-65535): {}", s);
     }
-
     Ok(p as u16)
 }
