@@ -1,28 +1,79 @@
 // src/main.rs
-// main.rs — thin like cheap toilet paper.
-// Launches a wobbly TUI, punts to a blocking scanner, and prints errors like haikus.
-// TODO: return proper exit codes, add a panic hook to unbrick the terminal, and stop pretending println! is observability.
-
+mod cli;
+mod io_utils;
 mod scan;
 mod tui;
 mod utils;
 
-use scan::run_scan;
-use tui::start_tui;
+use anyhow::Result;
+use clap::Parser;
+use std::sync::mpsc;
 
-// If this "app" had any less structure, it would be a gas.
-fn main() {
-    //Err::<(), std::io::Error>(std::io::Error::new(ErrorKind::NetworkDown, "")).expect("TUI-Fehler");
-    let result = start_tui();
+#[tokio::main]
+async fn main() -> Result<()> {
+    let opts = cli::Opts::parse();
 
-    match result {
-        Ok((target, ports, format, tx)) => {
-            if let Err(e) = run_scan(&target, &ports, format, tx) {
-                eprintln!("Scan-Fehler: {}", e);
+    // If user requested TUI, run TUI and collect options from it
+    if opts.tui {
+        match tui::start_tui() {
+            Ok((target, ports, format_str, tx)) => {
+                // convert format_str to enum
+                let format = match format_str {
+                    "html" => cli::Format::Html,
+                    "zip" => cli::Format::Zip,
+                    _ => cli::Format::Txt,
+                };
+
+                // parse ports
+                let ports_vec = match utils::parse_ports(&ports) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("Port parse error: {}", e);
+                        return Ok(());
+                    }
+                };
+
+                // expand single target (no CIDR in TUI)
+                let targets = vec![target];
+
+                let sender = Some(tx);
+                let results = scan::run_scan_async(&targets, &ports_vec, 300, 200, sender).await?;
+                io_utils::export_results(&results, format).await?;
+                return Ok(());
+            }
+            Err(e) => {
+                eprintln!("TUI error: {}", e);
+                return Ok(());
             }
         }
-        Err(e) => {
-            eprintln!("TUI-Fehler: {}", e);
-        }
     }
+
+    // Non-TUI CLI path
+    // Expand targets (max 1024 host entries by default)
+    let targets = cli::expand_targets(&opts.targets, 1024)?;
+    let ports = utils::parse_ports(&opts.ports)?;
+
+    // Create a simple logging channel for progress (prints to stdout)
+    let (tx_log, rx_log) = mpsc::channel::<String>();
+    std::thread::spawn(move || {
+        while let Ok(line) = rx_log.recv() {
+            println!("{}", line);
+        }
+    });
+
+    // run async scan
+    let results = scan::run_scan_async(
+        &targets,
+        &ports,
+        opts.timeout,
+        opts.concurrency,
+        Some(tx_log),
+    )
+    .await?;
+
+    // export results
+    io_utils::export_results(&results, opts.format).await?;
+
+    println!("Done.");
+    Ok(())
 }

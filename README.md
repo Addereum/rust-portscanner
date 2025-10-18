@@ -1,30 +1,30 @@
 # portscanner
 
-**Ein schneller Portscanner mit TUI, parallelem Scan, Export (ZIP) und farbiger Ausgabe.**  
-Rust · rayon für Parallelität · ratatui + crossterm für TUI · clap für CLI · colored für Terminalfarben · zip für Export.
+**A fast port scanner with TUI, parallel scanning, ZIP export, and colored output.**  
+Rust · tokio (async) · clap for CLI · ratatui + crossterm for TUI · colored for terminal colors · zip for export.
 
 ---
 
 ## Features
 
-- Paralleler TCP-Connect-Scan  
-- Portlisten und Bereiche (z. B. `22,80,8000-8100`)  
-- IPv4 / IPv6 Unterstützung  
-- Konfigurierbares Timeout und Threadanzahl  
-- Interaktive TUI-Ansicht  
-- Export (CSV/JSON) in ZIP-Archiv  
-- Farbige Terminalausgabe  
+- Parallel TCP connect scan
+- Port lists and ranges (e.g. `22,80,8000-8100`)
+- IPv4 / IPv6 Ready  
+- Configurable Timeout and Threadcount
+- Interactive TUI-View  
+- Export in ZIP-Archive  
+- Colored Terminaloutput  
 
 ---
 
 ## Installation
 
-### Voraussetzungen
-- Rust (aktuelle stable Toolchain)  
-- cargo verfügbar  
+### Requirements
+- Rust (actual stable version)  
+- cargo ready  
 
-### Repository klonen
-    git clone <repo-url>
+### Clone Repository
+    git clone https://github.com/Addereum/rust-portscanner
     cd portscanner
 
 ### Build (Debug)
@@ -32,88 +32,101 @@ Rust · rayon für Parallelität · ratatui + crossterm für TUI · clap für CL
 
 ### Build (Release)
     cargo build --release
-    # Binär liegt in target/release/portscanner
 
-### Installieren (global)
+### binary in target/release/portscanner
+
+### Install (global)
     cargo install --path .
 
 ---
 
-## Nutzung / Beispiele
+## Examples
 
-### Hilfe anzeigen
+### Show Help
     cargo run -- --help
-    # oder nach Installation
+    
+### or after installation
     portscanner --help
 
-### Einfacher Scan
+### Simple Scan
     portscanner -t 192.0.2.1 -p 1-1024
 
-### Mehrere Ziele und Ports
-    portscanner -t 192.0.2.1,example.com -p 22,80,443,8000-8100
+### Multiple targets and ports
+    portscanner --targets 192.0.2.1,example.com --ports 22,80,443,8000-8100
 
-### Paralleler Scan mit Timeout und Threads
+### Parallel Scan with Timeout and Threads
     portscanner -t example.com -p 1-65535 --timeout 200 --threads 200
 
-### TUI starten
-    portscanner --tui -t 192.0.2.1 -p 1-1024
+### TUI mode (start)
+    portscanner --tui --targets 192.0.2.1 --ports 1-1024
 
-### Ergebnis exportieren
-    portscanner -t example.com -p 1-1024 --export results.zip
+### Export results
+
+    portscanner --targets example.com --ports 1-1024 --format zip
 
 ---
 
-## Entwickeln & Debugging
+## Development & Debugging
 
-Tests:
-    cargo test
+### Tests
+```bash
+cargo test
+```
 
-Formatierung:
-    cargo fmt
+Formatting:
+```bash
+cargo fmt
+```
 
 Lint / Clippy:
-    cargo clippy --all-targets --all-features -- -D warnings
+```bash
+cargo clippy --all-targets --all-features -- -D warnings
+```
 
-Debug-Beispiel:
-    cargo run -- -t 127.0.0.1 -p 22,80
+Debug example:
+```bash
+ cargo run -- -t 127.0.0.1 -p 22,80
+ ```
 
 ---
 
 ## Packaging / Debian
 
-Mit cargo-deb:
-    cargo install cargo-deb
-    cargo build --release
-    cargo deb --target x86_64-unknown-linux-gnu
+With `cargo-deb`:
+```bash
+cargo install cargo-deb
+cargo build --release
+cargo deb --target x86_64-unknown-linux-gnu
+```
 
 ---
 
-## Sicherheit & Haftung
+## Security & Liability
 
-Scanne nur Netzwerke, für die du eine ausdrückliche Erlaubnis hast.  
-Unautorisierte Scans sind in vielen Jurisdiktionen rechtswidrig.  
-Keine Haftung durch den Autor.
+Only scan networks for which you have explicit permission.  
+Unauthorized scanning may be illegal in many jurisdictions.  
+The author accepts no liability or warranty.
 
 ---
 
 ## License
 
-GPL-3.0 (Datei LICENSE).
-- GPL-3.0: Copyleft, zwingt abgeleitete Werke bei Verteilung offen zu bleiben  
+GPL-3.0 (see `LICENSE` file).
+- GPL-3.0: Copyleft — requires derivative works to remain open source when distributed.
 
 ---
 
 ## Contribution
 
-1. Fork  
-2. Branch `feature/...` oder `fix/...`  
-3. Commit mit klarer Nachricht  
-4. Pull Request öffnen  
+1. Fork the repository
+2. Create a branch named `feature/...` or `fix/...`
+3. Commit with a clear message
+4. Open a Pull Request
 
-Bitte cargo fmt und Tests ausführen.
+Please run `cargo fmt` and all tests before submitting.
 
 ---
 
-## Kontakt
+## Contact
 
 Lukas Roß <contact@lukas-ross.de>
