@@ -35,22 +35,4 @@ depends = ["libc6 (>= 2.27)"]
 provides = ["portscanner"]
 conflicts = []
 replaces = []
-homepage = "https://lukas-ross.de"
 license-file = "LICENSE"
-
-# Short descriptions (English + German)
-description = "Fast port scanner with TUI, export and more"
-description-de = "Schneller Portscanner mit TUI, Export und mehr"
-
-# Long/extended descriptions (English + German)
-extended-description = """
-Portscanner with a terminal user interface (TUI), parallel scanning,
-and export capabilities. Supports multiple output formats and includes
-examples for shell completion and man page installation.
-"""
-extended-description-de = """
-Portscanner mit Terminal-Benutzeroberfläche (TUI), parallelem Scannen
-und Export-Funktionen. Unterstützt mehrere Ausgabeformate und enthält
-Beispiele für Shell-Completion und Manpage-Installation.
-"""
-
