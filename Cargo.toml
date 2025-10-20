@@ -2,6 +2,15 @@
 name = "portscanner"
 version = "0.1.0"
 edition = "2024"
+authors = ["Lukas Roß <contact@lukas-ross.de>"]
+description = "Fast port scanner with TUI, export and more"
+readme = "README.md"
+license-file = "LICENSE"
+repository = "https://github.com/Addereum/rust-portscanner"
+homepage = "https://lukas-ross.de"
+keywords = ["portscanner", "network", "tui", "cli"]
+categories = ["command-line-utilities"]
+exclude = ["/target", "/.git"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
@@ -20,5 +29,28 @@ anyhow = "1.0"
 [package.metadata.deb]
 name = "rust-portscanner"
 maintainer = "Lukas Roß <contact@lukas-ross.de>"
-extended-description = "Ein schneller Portscanner mit TUI, Export und mehr"
+section = "utils"
+priority = "optional"
+depends = ["libc6 (>= 2.27)"]
+provides = ["portscanner"]
+conflicts = []
+replaces = []
+homepage = "https://lukas-ross.de"
 license-file = "LICENSE"
+
+# Short descriptions (English + German)
+description = "Fast port scanner with TUI, export and more"
+description-de = "Schneller Portscanner mit TUI, Export und mehr"
+
+# Long/extended descriptions (English + German)
+extended-description = """
+Portscanner with a terminal user interface (TUI), parallel scanning,
+and export capabilities. Supports multiple output formats and includes
+examples for shell completion and man page installation.
+"""
+extended-description-de = """
+Portscanner mit Terminal-Benutzeroberfläche (TUI), parallelem Scannen
+und Export-Funktionen. Unterstützt mehrere Ausgabeformate und enthält
+Beispiele für Shell-Completion und Manpage-Installation.
+"""
+

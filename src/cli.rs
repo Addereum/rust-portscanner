@@ -31,7 +31,7 @@ pub struct Opts {
     #[arg(long, default_value = "txt")]
     pub format: Format,
 
-    /// start old TUI (interactive)
+    /// start TUI (interactive)
     #[arg(long)]
     pub tui: bool,
 }
